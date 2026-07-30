@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff; /* white */
+  --foreground: #000000; /* black */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: #CE1126; /* CU Red */
+  --color-accent-hover: #b30f21;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ffffff;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Base interactive elements styling for large tap targets */
+@layer base {
+  button, 
+  a, 
+  input, 
+  select {
+    @apply min-h-[48px] min-w-[48px];
+  }
+}
+
+/* Custom utilities for premium look */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-black/70 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50;
+  }
+}
