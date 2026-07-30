@@ -24,7 +24,9 @@ export default function ReceptionQRPage() {
         officeId: res.data.id, 
         qrSecret: res.data.qr_secret 
       });
-      generateQRDataUrl(payload);
+      const encodedPayload = btoa(payload);
+      const urlPayload = `${window.location.origin}/guest/details?q=${encodedPayload}`;
+      generateQRDataUrl(urlPayload);
     } else {
       setError(res.error || "Failed to load QR data");
       setIsLoading(false);
@@ -67,7 +69,9 @@ export default function ReceptionQRPage() {
         officeId: res.data.id, 
         qrSecret: res.data.qr_secret 
       });
-      await generateQRDataUrl(payload);
+      const encodedPayload = btoa(payload);
+      const urlPayload = `${window.location.origin}/guest/details?q=${encodedPayload}`;
+      await generateQRDataUrl(urlPayload);
     } else {
       setError(res.error || "Failed to regenerate QR");
     }

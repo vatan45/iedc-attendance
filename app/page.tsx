@@ -49,6 +49,16 @@ export default function Home() {
             {/* Hover glare effect */}
             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
           </Link>
+          
+          <Link 
+            href="/guest/scan" 
+            className="group relative flex items-center justify-between w-full p-4 bg-white dark:bg-gray-800 text-foreground border-2 border-gray-200 dark:border-gray-700 rounded-2xl font-bold text-lg overflow-hidden transition-all active:scale-[0.98] hover:border-accent hover:text-accent shadow-sm"
+          >
+            <span className="relative z-10 pl-2">Guest Access</span>
+            <div className="relative z-10 bg-gray-100 dark:bg-gray-700 group-hover:bg-accent/10 p-2 rounded-xl group-hover:translate-x-1 transition-colors">
+              <ArrowRight size={20} className="group-hover:text-accent transition-colors" />
+            </div>
+          </Link>
         </div>
       </div>
     </main>

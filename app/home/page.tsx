@@ -69,6 +69,19 @@ export default function EmployeeHome() {
       return;
     }
 
+    let finalPayload = qrPayload;
+    if (qrPayload.includes("?q=")) {
+      try {
+        const url = new URL(qrPayload);
+        const qParam = url.searchParams.get("q");
+        if (qParam) {
+          finalPayload = atob(qParam);
+        }
+      } catch (e) {
+        console.error("Failed to parse URL payload", e);
+      }
+    }
+
     try {
       const res = await fetch("/api/attendance/mark", {
         method: "POST",
@@ -76,7 +89,7 @@ export default function EmployeeHome() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ qrPayload, latitude, longitude })
+        body: JSON.stringify({ qrPayload: finalPayload, latitude, longitude })
       });
 
       const data = await res.json();
@@ -232,7 +245,7 @@ export default function EmployeeHome() {
         </div>
 
         {/* Bottom Fixed Action */}
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/95 to-transparent flex flex-col items-center pointer-events-none pb-8">
+        <div className="fixed bottom-[72px] left-0 right-0 p-6 bg-gradient-to-t from-background via-background/95 to-transparent flex flex-col items-center pointer-events-none pb-4 z-30">
           <button
             onClick={() => setIsScanning(true)}
             disabled={cooldown > 0}

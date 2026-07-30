@@ -80,7 +80,6 @@ export default function Scanner({ onScanSuccess, onCancel, onScanError }: Scanne
             <QRScanner
               onScan={(result) => handleScan(result[0].rawValue)}
               formats={["qr_code"]}
-              options={{ delayBetweenScanAttempts: 100 }}
               styles={{ container: { width: '100%', height: '100%' } }}
             />
           </div>

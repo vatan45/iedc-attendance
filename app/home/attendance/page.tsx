@@ -21,6 +21,14 @@ interface DailyGroup {
   isIncomplete: boolean;
 }
 
+const formatHoursToReadable = (decimalHours: number) => {
+  const h = Math.floor(decimalHours);
+  const m = Math.round((decimalHours - h) * 60);
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+};
+
 export default function MyAttendance() {
   const router = useRouter();
   // Default to current month
@@ -178,8 +186,8 @@ export default function MyAttendance() {
             <p className="text-4xl font-black">{totalDays} <span className="text-xl font-bold text-background/60">Days</span></p>
           </div>
           <div className="text-right relative z-10">
-            <p className="text-background/70 font-semibold text-xs uppercase tracking-wider mb-1">Total Hours</p>
-            <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-accent to-red-400">{totalHours.toFixed(1)} <span className="text-xl font-bold text-accent/60">Hrs</span></p>
+            <p className="text-background/70 font-semibold text-xs uppercase tracking-wider mb-1">Total Time</p>
+            <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-accent to-red-400">{formatHoursToReadable(totalHours)}</p>
           </div>
         </div>
 
@@ -218,7 +226,7 @@ export default function MyAttendance() {
                   ) : (
                     <span className="flex items-center gap-1.5 text-accent font-bold bg-accent/10 px-3 py-1 rounded-full text-sm">
                       <Clock size={14} />
-                      {group.totalHours?.toFixed(2)} hrs
+                      {group.totalHours ? formatHoursToReadable(group.totalHours) : "0m"}
                     </span>
                   )}
                 </div>
