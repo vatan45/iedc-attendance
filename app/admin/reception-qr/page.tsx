@@ -43,6 +43,7 @@ export default function ReceptionQRPage() {
       const url = await QRCode.toDataURL(payload, {
         width: 1000,
         margin: 2,
+        errorCorrectionLevel: 'L', // Lower error correction = less dense/complicated QR code
         color: {
           dark: '#111827', // text-gray-900
           light: '#FFFFFF'

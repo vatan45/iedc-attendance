@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import NotificationBell from "@/components/NotificationBell";
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
@@ -10,6 +12,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Dashboard", href: "/admin", icon: "📊" },
     { name: "Analytics", href: "/admin/analytics", icon: "📈" },
     { name: "Employees", href: "/admin/employees", icon: "👥" },
+    { name: "Tasks", href: "/admin/tasks", icon: "✅" },
+    { name: "Task Analytics", href: "/admin/tasks/analytics", icon: "📊" },
     { name: "Guest Entries", href: "/admin/guests", icon: "🎫" },
     { name: "Reception QR", href: "/admin/reception-qr", icon: "🖨️" },
     { name: "Office Settings", href: "/admin/office-settings", icon: "📍" },
@@ -20,9 +24,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       
       {/* Sidebar (Desktop) */}
       <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 shadow-sm fixed top-0 bottom-0 z-20">
-        <div className="p-6">
-          <h1 className="text-xl font-bold text-accent">IEDC Attendance Portal</h1>
-          <p className="text-xs text-foreground/50 mt-1">Admin Panel</p>
+        <div className="p-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-accent">IEDC Attendance Portal</h1>
+            <p className="text-xs text-foreground/50 mt-1">Admin Panel</p>
+          </div>
+          <NotificationBell />
         </div>
         <nav className="flex-1 px-4 py-4 flex flex-col gap-2">
           {navItems.map(item => {
@@ -64,7 +71,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Mobile Top Header */}
       <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 z-20">
         <h1 className="text-lg font-bold text-accent">IEDC Attendance Portal</h1>
-        <button 
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <button 
           onClick={async () => {
             const token = localStorage.getItem('attendance_session_token');
             if (token) {
@@ -81,6 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           Logout
         </button>
+        </div>
       </header>
 
       {/* Main Content */}

@@ -50,6 +50,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchStatuses();
     
+    // Trigger overdue check in the background (fire and forget)
+    fetch('/api/admin/tasks/check-overdue', { method: 'POST' }).catch(console.error);
+
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchStatuses();

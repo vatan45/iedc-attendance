@@ -9,6 +9,8 @@ interface HeaderProps {
   title: string;
 }
 
+import NotificationBell from "@/components/NotificationBell";
+
 export default function Header({ title }: HeaderProps) {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -68,13 +70,16 @@ export default function Header({ title }: HeaderProps) {
             {fullName && <span className="text-xs font-medium text-accent">Hi, {fullName}</span>}
           </div>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="p-2.5 bg-gray-100 dark:bg-gray-800 text-foreground rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95"
-          aria-label="Logout"
-        >
-          <LogOut size={18} className="text-accent" />
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button 
+            onClick={handleLogout}
+            className="p-2.5 bg-gray-100 dark:bg-gray-800 text-foreground rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95"
+            aria-label="Logout"
+          >
+            <LogOut size={18} className="text-accent" />
+          </button>
+        </div>
       </div>
     </header>
   );
