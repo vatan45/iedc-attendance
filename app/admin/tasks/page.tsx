@@ -114,8 +114,9 @@ function KanbanCard({ task, onClick }: { task: Task; onClick: () => void }) {
   );
 }
 
-function KanbanColumn({ status, title, tasks, onTaskClick, icon }: { status: string; title: string; tasks: Task[]; onTaskClick: (id: string) => void; icon: React.ReactNode }) {
+function KanbanColumn({ status, title, tasks, onTaskClick, icon, onSeeAll }: { status: string; title: string; tasks: Task[]; onTaskClick: (id: string) => void; icon: React.ReactNode; onSeeAll?: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const displayedTasks = tasks.slice(0, 5);
   
   return (
     <div 
@@ -135,10 +136,22 @@ function KanbanColumn({ status, title, tasks, onTaskClick, icon }: { status: str
       </div>
       
       <div className="flex flex-col gap-3 p-3 flex-1 overflow-y-auto">
-        {tasks.map(t => <KanbanCard key={t.id} task={t} onClick={() => onTaskClick(t.id)} />)}
+        {displayedTasks.map(t => <KanbanCard key={t.id} task={t} onClick={() => onTaskClick(t.id)} />)}
         {tasks.length === 0 && (
           <div className="flex-1 border-2 border-dashed border-border/60 rounded-2xl flex flex-col items-center justify-center p-8 text-muted-foreground/60">
             <span className="text-xs font-bold uppercase tracking-wider">No Tasks</span>
+          </div>
+        )}
+        {tasks.length > 5 && onSeeAll && (
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={onSeeAll}
+              className="w-full py-2.5 px-4 bg-card hover:bg-[#CE1126]/10 text-foreground hover:text-[#CE1126] border border-border/80 hover:border-[#CE1126]/40 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>See All ({tasks.length}) Tasks</span>
+              <span>➔</span>
+            </button>
           </div>
         )}
       </div>
@@ -161,6 +174,8 @@ export default function AdminTasksPage() {
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterOverdue, setFilterOverdue] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<"recent" | "history" | "all">("recent");
+  const [fullViewStatus, setFullViewStatus] = useState<string | null>(null);
 
   const [sortCol, setSortCol] = useState<string>("created_at");
   const [sortDesc, setSortDesc] = useState(true);
@@ -324,6 +339,19 @@ export default function AdminTasksPage() {
     if (filterPriority !== "all" && t.priority !== filterPriority) return false;
     if (filterAssignee !== "all" && t.assignee?.id !== filterAssignee) return false;
     if (filterOverdue && !isOverdueFn(t)) return false;
+
+    if (timeFilter === "recent") {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      threeDaysAgo.setHours(0, 0, 0, 0);
+      if (new Date(t.created_at) < threeDaysAgo) return false;
+    } else if (timeFilter === "history") {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      threeDaysAgo.setHours(0, 0, 0, 0);
+      if (new Date(t.created_at) >= threeDaysAgo) return false;
+    }
+
     return true;
   });
 
@@ -442,6 +470,30 @@ export default function AdminTasksPage() {
             <span>Overdue Only</span>
           </label>
 
+          <div className="flex bg-muted/60 p-1 rounded-xl shrink-0 border border-border/40">
+            <button 
+              type="button"
+              onClick={() => setTimeFilter("recent")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeFilter === "recent" ? "bg-[#CE1126] text-white shadow-xs" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              🔥 Last 3 Days
+            </button>
+            <button 
+              type="button"
+              onClick={() => setTimeFilter("history")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeFilter === "history" ? "bg-[#CE1126] text-white shadow-xs" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              🕰️ History (&gt;3 Days)
+            </button>
+            <button 
+              type="button"
+              onClick={() => setTimeFilter("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeFilter === "all" ? "bg-[#CE1126] text-white shadow-xs" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              🌐 All Tasks
+            </button>
+          </div>
+
           <div className="w-px h-7 bg-border mx-1 hidden lg:block" />
 
           <div className="flex bg-muted/60 p-1 rounded-xl shrink-0">
@@ -467,6 +519,44 @@ export default function AdminTasksPage() {
               <Skeleton key={i} className="h-[450px] w-full rounded-3xl" />
             ))}
           </div>
+        ) : fullViewStatus !== null ? (
+          /* Full Page View of All Tasks in Selected Status */
+          <div className="flex flex-col gap-6 relative z-10 animate-fade-in pb-12">
+            <div className="bg-card border border-border/80 rounded-3xl p-6 shadow-md relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setFullViewStatus(null)}
+                  className="h-10 px-4 bg-[#CE1126]/10 text-[#CE1126] hover:bg-[#CE1126] hover:text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shrink-0 shadow-sm"
+                >
+                  <span>← Back to Board</span>
+                </button>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-foreground uppercase tracking-tight flex items-center gap-2">
+                    <span>{fullViewStatus.replace('_', ' ')} Directory</span>
+                    <Badge className="bg-[#CE1126] text-white font-black px-3 py-0.5 rounded-full text-xs">
+                      {filteredTasks.filter(t => t.status === fullViewStatus).length} Total Tasks
+                    </Badge>
+                  </h2>
+                  <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                    Showing complete unpaginated directory of all tasks assigned to this column.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredTasks.filter(t => t.status === fullViewStatus).map(task => (
+                <div key={task.id} className="cursor-pointer">
+                  <KanbanCard task={task} onClick={() => router.push(`/tasks/${task.id}`)} />
+                </div>
+              ))}
+            </div>
+            {filteredTasks.filter(t => t.status === fullViewStatus).length === 0 && (
+              <div className="border-2 border-dashed border-border/60 rounded-3xl p-12 text-center text-muted-foreground font-bold text-sm">
+                No tasks currently present in this column.
+              </div>
+            )}
+          </div>
         ) : viewMode === "board" ? (
           /* Kanban Board */
           <div className="flex-1 pb-6 relative z-10">
@@ -477,10 +567,10 @@ export default function AdminTasksPage() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
-                <KanbanColumn icon={<CheckSquare size={16} className="text-slate-500"/>} status="todo" title="To Do" tasks={filteredTasks.filter(t => t.status === "todo")} onTaskClick={(id) => router.push(`/tasks/${id}`)} />
-                <KanbanColumn icon={<Clock size={16} className="text-blue-500"/>} status="in_progress" title="In Progress" tasks={filteredTasks.filter(t => t.status === "in_progress")} onTaskClick={(id) => router.push(`/tasks/${id}`)} />
-                <KanbanColumn icon={<CheckCircle size={16} className="text-green-500"/>} status="done" title="Done" tasks={filteredTasks.filter(t => t.status === "done")} onTaskClick={(id) => router.push(`/tasks/${id}`)} />
-                <KanbanColumn icon={<ShieldAlert size={16} className="text-orange-500"/>} status="blocked" title="Blocked" tasks={filteredTasks.filter(t => t.status === "blocked")} onTaskClick={(id) => router.push(`/tasks/${id}`)} />
+                <KanbanColumn icon={<CheckSquare size={16} className="text-slate-500"/>} status="todo" title="To Do" tasks={filteredTasks.filter(t => t.status === "todo")} onTaskClick={(id) => router.push(`/tasks/${id}`)} onSeeAll={() => setFullViewStatus("todo")} />
+                <KanbanColumn icon={<Clock size={16} className="text-blue-500"/>} status="in_progress" title="In Progress" tasks={filteredTasks.filter(t => t.status === "in_progress")} onTaskClick={(id) => router.push(`/tasks/${id}`)} onSeeAll={() => setFullViewStatus("in_progress")} />
+                <KanbanColumn icon={<CheckCircle size={16} className="text-green-500"/>} status="done" title="Done" tasks={filteredTasks.filter(t => t.status === "done")} onTaskClick={(id) => router.push(`/tasks/${id}`)} onSeeAll={() => setFullViewStatus("done")} />
+                <KanbanColumn icon={<ShieldAlert size={16} className="text-orange-500"/>} status="blocked" title="Blocked" tasks={filteredTasks.filter(t => t.status === "blocked")} onTaskClick={(id) => router.push(`/tasks/${id}`)} onSeeAll={() => setFullViewStatus("blocked")} />
 
                 <DragOverlay dropAnimation={null}>
                   {activeDragTask ? <KanbanCard task={activeDragTask} onClick={() => {}} /> : null}
