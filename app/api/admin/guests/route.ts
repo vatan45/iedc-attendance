@@ -34,15 +34,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch today's guests
+    // Check filter type from query params
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') || 'today';
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data: guests, error: guestsError } = await supabase
+    let query = supabase
       .from('guest_entries')
       .select('*')
-      .gte('scanned_at', today.toISOString())
       .order('scanned_at', { ascending: false });
+
+    if (type === 'today') {
+      query = query.gte('scanned_at', today.toISOString());
+    } else if (type === 'history') {
+      query = query.lt('scanned_at', today.toISOString()).limit(500);
+    } else if (type === 'all') {
+      query = query.limit(500);
+    }
+
+    const { data: guests, error: guestsError } = await query;
 
     if (guestsError) {
       console.error('Error fetching guests:', guestsError);
