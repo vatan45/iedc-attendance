@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { sendWhatsAppTaskNotification } from '@/lib/whatsapp';
 
 async function verifyEmployee(request: Request, supabase: any) {
   const authHeader = request.headers.get('authorization');
@@ -94,6 +95,20 @@ export async function POST(request: Request) {
         related_task_id: task.id
       });
     }
+
+    // Fetch assignee details for WhatsApp message formatting
+    const { data: assignee } = await supabase.from('employees').select('full_name').eq('id', assigned_to).single();
+
+    // Trigger automated WhatsApp notification to team group
+    await sendWhatsAppTaskNotification({
+      title,
+      description,
+      assigneeName: assignee?.full_name || 'Team Member',
+      assignerName: assigner?.full_name || 'Team Colleague',
+      priority,
+      dueDate: due_date || null,
+      taskId: task.id
+    });
 
     return NextResponse.json({ success: true, task });
   } catch (err) {
