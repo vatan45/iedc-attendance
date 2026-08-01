@@ -167,7 +167,7 @@ export default function AdminTasksPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -259,7 +259,7 @@ export default function AdminTasksPage() {
     const newErrors: any = {};
     if (!title.trim()) newErrors.title = "Required";
     if (!description.trim()) newErrors.description = "Required";
-    if (!assignedTo) newErrors.assignedTo = "Select an assignee";
+    if (!assignedTo || assignedTo.length === 0) newErrors.assignedTo = "Select at least one assignee";
     
     if (dueDate) {
       const selected = new Date(dueDate);
@@ -295,8 +295,8 @@ export default function AdminTasksPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create task");
 
-      const emp = employees.find(e => e.id === assignedTo);
-      showToastMsg(`Assigned to ${emp?.full_name || 'employee'}`);
+      const count = assignedTo.length;
+      showToastMsg(count > 1 ? `Task assigned to ${count} team members` : `Task assigned successfully`);
       
       setShowAdd(false);
       resetForm();
@@ -311,7 +311,7 @@ export default function AdminTasksPage() {
   const resetForm = () => {
     setTitle("");
     setDescription("");
-    setAssignedTo("");
+    setAssignedTo([]);
     setPriority("medium");
     setDueDate(new Date().toISOString().split("T")[0]);
     setErrors({});
@@ -616,17 +616,61 @@ export default function AdminTasksPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Assign To <span className="text-destructive">*</span></Label>
-              <select 
-                value={assignedTo} 
-                onChange={e => { setAssignedTo(e.target.value); if(errors.assignedTo) setErrors({...errors, assignedTo: null}); }} 
-                className="h-11 px-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-[#CE1126] outline-none font-medium text-sm text-foreground"
-              >
-                <option value="" disabled>Select an employee from directory</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.employee_code})</option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Assign To ({assignedTo.length} selected) <span className="text-destructive">*</span>
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (assignedTo.length === employees.length) {
+                      setAssignedTo([]);
+                    } else {
+                      setAssignedTo(employees.map(e => e.id));
+                    }
+                    if (errors.assignedTo) setErrors({ ...errors, assignedTo: null });
+                  }}
+                  className="text-[11px] font-extrabold text-[#CE1126] hover:underline cursor-pointer"
+                >
+                  {assignedTo.length === employees.length && employees.length > 0 ? "Clear All" : "Select All"}
+                </button>
+              </div>
+              
+              <div className="max-h-40 overflow-y-auto p-2 bg-muted/40 border border-border rounded-xl flex flex-col gap-1.5 shadow-inner">
+                {employees.map(emp => {
+                  const isSelected = assignedTo.includes(emp.id);
+                  return (
+                    <div
+                      key={emp.id}
+                      onClick={() => {
+                        const next = isSelected 
+                          ? assignedTo.filter(id => id !== emp.id)
+                          : [...assignedTo, emp.id];
+                        setAssignedTo(next);
+                        if (errors.assignedTo) setErrors({ ...errors, assignedTo: null });
+                      }}
+                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border ${
+                        isSelected 
+                          ? "bg-[#CE1126]/10 border-[#CE1126]/40 text-foreground font-bold" 
+                          : "hover:bg-muted/60 border-transparent text-muted-foreground"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                          isSelected ? "bg-[#CE1126] border-[#CE1126] text-white font-black" : "border-border bg-card"
+                        }`}>
+                          {isSelected && <span className="text-[10px]">✓</span>}
+                        </div>
+                        <span>{emp.full_name}</span>
+                      </div>
+                      <span className="text-[10px] font-mono opacity-70">{emp.employee_code}</span>
+                    </div>
+                  );
+                })}
+                {employees.length === 0 && (
+                  <p className="text-xs text-muted-foreground p-2 text-center font-medium">No employees found.</p>
+                )}
+              </div>
               {errors.assignedTo && <p className="text-destructive text-xs font-bold">{errors.assignedTo}</p>}
             </div>
 

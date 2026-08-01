@@ -43,10 +43,15 @@ export default function EmployeeTasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newTicket, setNewTicket] = useState({
+  const [newTicket, setNewTicket] = useState<{
+    title: string;
+    description: string;
+    assigned_to: string[];
+    priority: string;
+  }>({
     title: "",
     description: "",
-    assigned_to: "",
+    assigned_to: [],
     priority: "medium",
   });
 
@@ -103,8 +108,8 @@ export default function EmployeeTasksPage() {
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTicket.title || !newTicket.description || !newTicket.assigned_to) {
-      alert("Please fill all required fields");
+    if (!newTicket.title || !newTicket.description || newTicket.assigned_to.length === 0) {
+      alert("Please fill all required fields and select at least one employee");
       return;
     }
 
@@ -123,7 +128,7 @@ export default function EmployeeTasksPage() {
       if (res.ok) {
         fetchTasks();
         setIsModalOpen(false);
-        setNewTicket({ title: "", description: "", assigned_to: "", priority: "medium" });
+        setNewTicket({ title: "", description: "", assigned_to: [], priority: "medium" });
         setActiveTab("raised");
       } else {
         alert("Failed to create ticket");
@@ -209,18 +214,57 @@ export default function EmployeeTasksPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Assign To <span className="text-destructive">*</span></Label>
-                  <select 
-                    required
-                    value={newTicket.assigned_to}
-                    onChange={(e) => setNewTicket({...newTicket, assigned_to: e.target.value})}
-                    className="h-11 px-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-[#CE1126] outline-none font-medium text-sm text-foreground"
-                  >
-                    <option value="" disabled>Select an employee</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.full_name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Assign To ({newTicket.assigned_to.length} selected) <span className="text-destructive">*</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newTicket.assigned_to.length === employees.length) {
+                          setNewTicket({ ...newTicket, assigned_to: [] });
+                        } else {
+                          setNewTicket({ ...newTicket, assigned_to: employees.map(e => e.id) });
+                        }
+                      }}
+                      className="text-[11px] font-extrabold text-[#CE1126] hover:underline cursor-pointer"
+                    >
+                      {newTicket.assigned_to.length === employees.length && employees.length > 0 ? "Clear All" : "Select All"}
+                    </button>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto p-2 bg-muted/40 border border-border rounded-xl flex flex-col gap-1 shadow-inner">
+                    {employees.map(emp => {
+                      const isSelected = newTicket.assigned_to.includes(emp.id);
+                      return (
+                        <div
+                          key={emp.id}
+                          onClick={() => {
+                            const next = isSelected
+                              ? newTicket.assigned_to.filter(id => id !== emp.id)
+                              : [...newTicket.assigned_to, emp.id];
+                            setNewTicket({ ...newTicket, assigned_to: next });
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border ${
+                            isSelected
+                              ? "bg-[#CE1126]/10 border-[#CE1126]/40 text-foreground font-bold"
+                              : "hover:bg-muted/60 border-transparent text-muted-foreground"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                              isSelected ? "bg-[#CE1126] border-[#CE1126] text-white font-black" : "border-border bg-card"
+                            }`}>
+                              {isSelected && <span className="text-[10px]">✓</span>}
+                            </div>
+                            <span>{emp.full_name}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {employees.length === 0 && (
+                      <p className="text-xs text-muted-foreground p-2 text-center font-medium">No employees found.</p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Priority</Label>

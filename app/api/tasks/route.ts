@@ -50,67 +50,78 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, description, assigned_to, priority = 'medium', due_date } = body;
 
-    if (!title || !description || !assigned_to) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const assigneeIds: string[] = Array.isArray(assigned_to) ? assigned_to : [assigned_to].filter(Boolean);
+
+    if (!title || !description || assigneeIds.length === 0) {
+      return NextResponse.json({ error: 'Missing required fields or assignees' }, { status: 400 });
     }
 
     // Fetch the assigner details for the notification
     const { data: assigner } = await supabase.from('employees').select('full_name').eq('id', employeeId).single();
 
-    // Insert task
-    const { data: task, error: taskError } = await supabase
-      .from('tasks')
-      .insert({
+    const createdTasks = [];
+    const assigneeNames: string[] = [];
+
+    for (const empId of assigneeIds) {
+      // Insert task
+      const { data: task, error: taskError } = await supabase
+        .from('tasks')
+        .insert({
+          title,
+          description,
+          assigned_to: empId,
+          assigned_by: employeeId,
+          priority,
+          due_date: due_date || null,
+          status: 'todo'
+        })
+        .select()
+        .single();
+
+      if (taskError) throw taskError;
+      createdTasks.push(task);
+
+      // Insert activity log
+      await supabase.from('task_activity_log').insert({
+        task_id: task.id,
+        actor_id: employeeId,
+        action: 'created',
+        details: { title, priority, due_date }
+      });
+
+      // Insert notification for the assignee
+      if (assigner) {
+        await supabase.from('notifications').insert({
+          employee_id: empId,
+          type: 'task_assigned',
+          message: `${assigner.full_name} raised a new ticket for you: ${title}`,
+          related_task_id: task.id
+        });
+      }
+
+      // Fetch assignee name for summary report
+      const { data: assignee } = await supabase.from('employees').select('full_name').eq('id', empId).single();
+      if (assignee?.full_name) assigneeNames.push(assignee.full_name);
+    }
+
+    // Format consolidated names list for WhatsApp broadcast
+    const combinedAssignees = assigneeNames.length > 3
+      ? `${assigneeNames.slice(0, 3).join(', ')} (+${assigneeNames.length - 3} others)`
+      : assigneeNames.join(', ') || 'Team Members';
+
+    if (createdTasks.length > 0) {
+      await sendWhatsAppTaskNotification({
         title,
         description,
-        assigned_to,
-        assigned_by: employeeId,
+        assigneeName: combinedAssignees,
+        assignerName: assigner?.full_name || 'Team Colleague',
         priority,
-        due_date: due_date || null,
-        status: 'todo'
-      })
-      .select()
-      .single();
-
-    if (taskError) throw taskError;
-
-    // Insert activity log
-    await supabase.from('task_activity_log').insert({
-      task_id: task.id,
-      actor_id: employeeId,
-      action: 'created',
-      details: {
-        title,
-        priority,
-        due_date
-      }
-    });
-
-    // Insert notification for the assignee
-    if (assigner) {
-      await supabase.from('notifications').insert({
-        employee_id: assigned_to,
-        type: 'task_assigned',
-        message: `${assigner.full_name} raised a new ticket for you: ${title}`,
-        related_task_id: task.id
+        dueDate: due_date || null,
+        taskId: createdTasks[0].id
       });
     }
 
-    // Fetch assignee details for WhatsApp message formatting
-    const { data: assignee } = await supabase.from('employees').select('full_name').eq('id', assigned_to).single();
-
-    // Trigger automated WhatsApp notification to team group
-    await sendWhatsAppTaskNotification({
-      title,
-      description,
-      assigneeName: assignee?.full_name || 'Team Member',
-      assignerName: assigner?.full_name || 'Team Colleague',
-      priority,
-      dueDate: due_date || null,
-      taskId: task.id
-    });
-
-    return NextResponse.json({ success: true, task });
+    return NextResponse.json({ success: true, tasks: createdTasks, task: createdTasks[0] });
   } catch (err) {
     console.error('POST Task error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
