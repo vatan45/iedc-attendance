@@ -16,7 +16,7 @@ interface TaskNotificationPayload {
 
 export async function sendWhatsAppTaskNotification(task: TaskNotificationPayload) {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://iedc-attendance.vercel.app';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://iedcattendance.vercel.app';
     const taskLink = `${appUrl.replace(/\/$/, '')}/tasks/${task.taskId}`;
 
     // Priority Emoji Mapping
