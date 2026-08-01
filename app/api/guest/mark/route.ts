@@ -34,7 +34,15 @@ export async function POST(request: Request) {
     }
 
     // Security Check 1: Verify QR Secret
-    if (parsedPayload.officeId !== office.id || parsedPayload.qrSecret !== office.qr_secret) {
+    // We allow matching either the full qr_secret or just the first 8 characters (short format)
+    const validSecret = office.qr_secret;
+    const shortSecret = validSecret.split('-')[0];
+    
+    // We ignore officeId for the short format since we only have one office anyway
+    const isLegacyMatch = parsedPayload.officeId === office.id && parsedPayload.qrSecret === validSecret;
+    const isShortMatch = parsedPayload.qrSecret === shortSecret || parsedPayload.qrSecret === validSecret;
+
+    if (!isLegacyMatch && !isShortMatch) {
       return NextResponse.json({ error: 'This QR code is no longer valid, please rescan the one at reception.' }, { status: 403 });
     }
 

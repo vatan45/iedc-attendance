@@ -1,9 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
 import { handleAuthError } from "@/lib/clientAuth";
+import { ArrowLeft, Download, Plus, Clock, Calendar, UserCheck, UserX, AlertTriangle, Trash2, Edit2, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Log {
   id: string;
@@ -29,8 +38,6 @@ interface DailyGroup {
   isIncomplete: boolean;
 }
 
-import { use } from "react";
-
 export default function AdminEmployeeDetail(props: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const params = use(props.params);
@@ -41,7 +48,6 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Date range defaults to current month
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
@@ -81,14 +87,14 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
         handleAuthError(router);
         return;
       }
-      if (!res.ok) throw new Error("Failed to load employee data");
+      if (!res.ok) throw new Error("Failed to load employee logs");
 
       const data = await res.json();
       setEmployee(data.employee);
       processLogs(data.logs || []);
     } catch (err) {
       console.error(err);
-      setError("Failed to load data.");
+      setError("Failed to fetch employee attendance records.");
     } finally {
       setIsLoading(false);
     }
@@ -140,8 +146,6 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
     if (!editLogId || !editTimeStr) return;
     try {
       const token = localStorage.getItem("attendance_session_token");
-      
-      // Need to construct full ISO string from the selected date and time
       const log = groupedLogs.flatMap(g => g.logs).find(l => l.id === editLogId);
       if (!log) return;
       
@@ -158,12 +162,12 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
       setEditLogId(null);
       fetchData();
     } catch {
-      alert("Failed to update log.");
+      alert("Failed to modify log time.");
     }
   };
 
   const handleDelete = async (logId: string) => {
-    if (!window.confirm("Are you sure you want to delete this log?")) return;
+    if (!window.confirm("Are you certain you wish to delete this attendance log?")) return;
     try {
       const token = localStorage.getItem("attendance_session_token");
       const res = await fetch(`/api/admin/employee/${employeeId}/logs/${logId}`, {
@@ -173,7 +177,7 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
       if (!res.ok) throw new Error();
       fetchData();
     } catch {
-      alert("Failed to delete log.");
+      alert("Failed to remove log.");
     }
   };
 
@@ -181,7 +185,6 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
     if (!addLogDate || !addLogTime) return;
     try {
       const token = localStorage.getItem("attendance_session_token");
-      
       const dateObj = new Date(addLogDate);
       const datePart = dateObj.toISOString().split('T')[0];
       const newIso = new Date(`${datePart}T${addLogTime}:00`).toISOString();
@@ -196,7 +199,7 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
       setAddLogDate(null);
       fetchData();
     } catch {
-      alert("Failed to add log.");
+      alert("Failed to insert log.");
     }
   };
 
@@ -212,9 +215,7 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
       ])
     );
     
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-      
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -225,210 +226,243 @@ export default function AdminEmployeeDetail(props: { params: Promise<{ id: strin
   };
 
   return (
-    <div className="flex flex-col min-h-full">
-      <div className="px-6 pb-6 pt-2 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-6">
+    <div className="flex flex-col min-h-screen bg-transparent">
+      <Header title="Employee Records" />
+      
+      <main className="p-4 sm:p-6 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-6 pb-16">
         
-        {/* Navigation & Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/admin" className="text-foreground/50 hover:text-foreground bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </Link>
-          {isLoading && !employee ? (
-            <div className="h-8 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
-          ) : employee ? (
-            <div className="flex-1 flex justify-between items-center">
+        {/* Navigation & Employee Profile Strip */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between bg-card p-5 rounded-3xl border border-border shadow-xs">
+          <div className="flex items-center gap-3.5">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/admin")} className="rounded-xl h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground border border-border/50">
+              <ArrowLeft size={18} />
+            </Button>
+            {isLoading && !employee ? (
+              <div className="space-y-1.5">
+                <Skeleton className="h-6 w-44 rounded-md" />
+                <Skeleton className="h-4 w-28 rounded-md" />
+              </div>
+            ) : employee ? (
               <div>
-                <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-                  {employee.full_name}
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">{employee.full_name}</h1>
                   {employee.is_active ? (
-                    <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-md">ACTIVE</span>
+                    <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 uppercase font-black">Active</Badge>
                   ) : (
-                    <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-md">DEACTIVATED</span>
+                    <Badge variant="outline" className="text-[10px] bg-destructive/15 text-destructive border-destructive/20 uppercase font-black">Deactivated</Badge>
                   )}
-                </h1>
-                <p className="text-sm text-foreground/60">{employee.employee_code}</p>
+                </div>
+                <p className="text-xs text-muted-foreground font-semibold mt-0.5">Code: {employee.employee_code}</p>
               </div>
-              
-              <div className="text-right">
-                <p className="text-xs text-foreground/50 uppercase font-semibold mb-1">Live Status</p>
-                {employee.currentStatus === "entry" ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700">
-                    Inside
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-500">
-                    Outside
-                  </span>
-                )}
-              </div>
+            ) : (
+              <h1 className="text-xl font-bold text-foreground">Employee Record Not Found</h1>
+            )}
+          </div>
+
+          {employee ? (
+            <div className="flex items-center gap-2.5 sm:self-center">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Live Status:</span>
+              {employee.currentStatus === "entry" ? (
+                <Badge className="bg-green-600 hover:bg-green-600 text-white gap-1.5 px-3 py-1 text-xs font-extrabold rounded-full">
+                  <UserCheck size={14} /> <span>Checked In</span>
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-muted text-muted-foreground gap-1.5 px-3 py-1 text-xs font-extrabold rounded-full">
+                  <UserX size={14} /> <span>Checked Out</span>
+                </Badge>
+              )}
             </div>
-          ) : (
-            <h1 className="text-2xl font-bold text-foreground">Employee Not Found</h1>
-          )}
+          ) : null}
         </div>
 
-        {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium">{error}</div>}
+        {error ? (
+          <div className="bg-destructive/15 text-destructive border border-destructive/30 p-4 rounded-2xl text-xs font-bold flex items-center gap-2">
+            <AlertTriangle size={16} /> <span>{error}</span>
+          </div>
+        ) : null}
 
-        {/* Date Filter & Export */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <input 
+        {/* Date Filter & CSV Export */}
+        <Card className="rounded-2xl p-3.5 border-border bg-card/90 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+            <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+              <Calendar size={14} className="text-[#CE1126]" /> <span>Range:</span>
+            </span>
+            <Input 
               type="date" 
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+              className="w-36 h-9 rounded-xl bg-muted/40 text-xs font-bold"
             />
-            <span className="text-foreground/50">to</span>
-            <input 
+            <span className="text-xs text-muted-foreground font-bold">to</span>
+            <Input 
               type="date" 
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+              className="w-36 h-9 rounded-xl bg-muted/40 text-xs font-bold"
             />
           </div>
-          <button 
+          <Button 
             onClick={downloadCSV}
+            variant="outline"
+            size="sm"
             disabled={groupedLogs.length === 0}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-100 dark:bg-gray-800 text-foreground font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm flex items-center gap-2 justify-center"
+            className="w-full sm:w-auto font-bold text-xs rounded-xl h-9 gap-1.5 border-border"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Export CSV
-          </button>
-        </div>
+            <Download size={14} /> <span>Export Attendance CSV</span>
+          </Button>
+        </Card>
 
-        {/* Logs */}
-        <div className="flex flex-col gap-6">
+        {/* Daily Logs Timeline */}
+        <div className="flex flex-col gap-4">
           {isLoading ? (
-             <div className="h-32 bg-gray-100 dark:bg-gray-900 rounded-2xl animate-pulse"></div>
+            <div className="space-y-4">
+              <Skeleton className="h-36 w-full rounded-3xl" />
+              <Skeleton className="h-36 w-full rounded-3xl" />
+            </div>
           ) : groupedLogs.length === 0 ? (
-             <div className="bg-white dark:bg-gray-900 p-10 text-center rounded-2xl border border-gray-100 dark:border-gray-800">
-               <p className="text-foreground/50">No logs found for this date range.</p>
-             </div>
+            <Card className="p-12 text-center rounded-3xl border-border bg-card/90 text-muted-foreground">
+              <Clock size={32} className="mx-auto mb-2 text-muted-foreground/40" />
+              <p className="text-sm font-bold">No activity logs discovered in this date window.</p>
+            </Card>
           ) : (
             groupedLogs.map(group => (
-              <div key={group.dateStr} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                
-                <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-gray-800 pb-3">
-                  <h3 className="font-semibold text-foreground text-lg">{group.dateStr}</h3>
-                  <div className="flex items-center gap-4">
+              <Card key={group.dateStr} className="rounded-3xl border-border bg-card p-5 shadow-sm">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-foreground text-base">{group.dateStr}</h3>
                     {group.isIncomplete ? (
-                      <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">INCOMPLETE</span>
+                      <Badge variant="destructive" className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">Incomplete Cycle</Badge>
                     ) : (
-                      <span className="text-accent font-bold">{group.totalHours?.toFixed(2)} hrs</span>
+                      <Badge className="bg-[#CE1126]/15 text-[#CE1126] border border-[#CE1126]/20 text-xs font-black px-2.5 py-0.5 rounded-full hover:bg-[#CE1126]/15">
+                        {group.totalHours?.toFixed(2)} hrs total
+                      </Badge>
                     )}
-                    <button 
-                      onClick={() => setAddLogDate(group.dateObj.toISOString())}
-                      className="text-xs font-medium text-accent hover:underline"
-                    >
-                      + Add Log
-                    </button>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setAddLogDate(group.dateObj.toISOString())}
+                    className="text-xs font-bold text-[#CE1126] hover:bg-[#CE1126]/10 h-8 gap-1 px-2.5 rounded-xl"
+                  >
+                    <Plus size={14} strokeWidth={3} /> <span>Add Manual Log</span>
+                  </Button>
                 </div>
 
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2.5">
                   {group.logs.map(log => (
-                    <div key={log.id} className="flex items-center justify-between group/row p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${log.type === 'entry' ? 'bg-green-100 text-green-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                          {log.type === 'entry' ? (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                          )}
+                    <div key={log.id} className="flex items-center justify-between group/row p-2.5 -mx-2 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border/60">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border ${log.type === 'entry' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
+                          <Clock size={16} strokeWidth={2.5} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold uppercase tracking-wider">{log.type}</p>
-                            {log.added_by_admin && (
-                              <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">MANUAL</span>
-                            )}
+                            <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">{log.type} Log</span>
+                            {log.added_by_admin ? (
+                              <Badge variant="secondary" className="text-[9px] bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black uppercase px-1.5 py-0">Manual Admin</Badge>
+                            ) : null}
                           </div>
-                          <p className="text-xs text-foreground/70">
+                          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
                             {new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            {!log.added_by_admin && log.distance_from_office_meters !== undefined ? (
+                              <span className="text-[11px] text-muted-foreground/80 ml-2">({Math.round(log.distance_from_office_meters)}m from facility)</span>
+                            ) : null}
                           </p>
                         </div>
                       </div>
                       
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                        <button 
+                      {/* Action Tools */}
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <Button 
+                          size="icon"
+                          variant="ghost"
                           onClick={() => {
                             setEditLogId(log.id);
                             const d = new Date(log.scanned_at);
                             setEditTimeStr(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
                           }}
-                          className="p-1.5 text-gray-400 hover:text-accent hover:bg-accent/10 rounded-md transition-colors" title="Edit Time"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" title="Edit Timestamp"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        </button>
-                        <button 
+                          <Edit2 size={14} />
+                        </Button>
+                        <Button 
+                          size="icon"
+                          variant="ghost"
                           onClick={() => handleDelete(log.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete Log"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg" title="Delete Log"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
+                          <Trash2 size={14} />
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
-
-              </div>
+              </Card>
             ))
           )}
         </div>
-      </div>
+      </main>
 
-      {/* Edit Modal */}
-      {editLogId && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-bold mb-4">Edit Log Time</h3>
-            <input 
+      {/* Edit Timestamp Dialog */}
+      <Dialog open={!!editLogId} onOpenChange={(open) => { if (!open) setEditLogId(null); }}>
+        <DialogContent className="sm:max-w-xs rounded-3xl p-6 border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">Modify Log Timestamp</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-medium">Adjust the specific hour and minute of this scan record</DialogDescription>
+          </DialogHeader>
+          <div className="my-2">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Time (HH:MM)</Label>
+            <Input 
               type="time" 
               value={editTimeStr}
               onChange={(e) => setEditTimeStr(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mb-6"
+              className="h-11 rounded-xl bg-muted/40 font-bold text-sm"
             />
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setEditLogId(null)} className="px-4 py-2 font-medium text-foreground/60">Cancel</button>
-              <button onClick={handleEdit} className="px-4 py-2 bg-accent text-white font-medium rounded-lg">Save</button>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setEditLogId(null)} className="rounded-xl font-semibold text-xs">Cancel</Button>
+            <Button onClick={handleEdit} className="bg-[#CE1126] hover:bg-[#b30f21] text-white rounded-xl font-bold text-xs px-5 shadow-md">Update Timestamp</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Insert Log Dialog */}
+      <Dialog open={!!addLogDate} onOpenChange={(open) => { if (!open) setAddLogDate(null); }}>
+        <DialogContent className="sm:max-w-sm rounded-3xl p-6 border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">Insert Manual Log</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-medium">
+              Adding entry for date: <span className="font-bold text-foreground">{addLogDate ? new Date(addLogDate).toLocaleDateString() : ""}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 my-2">
+            <div>
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Scan Type</Label>
+              <select 
+                value={addLogType} 
+                onChange={(e) => setAddLogType(e.target.value as "entry"|"exit")}
+                className="w-full h-11 px-3 bg-muted/40 border border-border rounded-xl font-bold text-sm text-foreground focus:ring-2 focus:ring-[#CE1126] outline-none"
+              >
+                <option value="entry">Entry Scan</option>
+                <option value="exit">Exit Scan</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Time (HH:MM)</Label>
+              <Input 
+                type="time" 
+                value={addLogTime}
+                onChange={(e) => setAddLogTime(e.target.value)}
+                className="h-11 rounded-xl bg-muted/40 font-bold text-sm"
+              />
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Add Log Modal */}
-      {addLogDate && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-bold mb-4">Manually Add Log</h3>
-            <p className="text-sm text-foreground/60 mb-4">Date: {new Date(addLogDate).toLocaleDateString()}</p>
-            
-            <label className="block text-sm font-medium mb-1">Type</label>
-            <select 
-              value={addLogType} 
-              onChange={(e) => setAddLogType(e.target.value as "entry"|"exit")}
-              className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mb-4"
-            >
-              <option value="entry">Entry</option>
-              <option value="exit">Exit</option>
-            </select>
-
-            <label className="block text-sm font-medium mb-1">Time</label>
-            <input 
-              type="time" 
-              value={addLogTime}
-              onChange={(e) => setAddLogTime(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mb-6"
-            />
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setAddLogDate(null)} className="px-4 py-2 font-medium text-foreground/60">Cancel</button>
-              <button onClick={handleAddLog} disabled={!addLogTime} className="px-4 py-2 bg-accent text-white font-medium rounded-lg disabled:opacity-50">Add Log</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+          <DialogFooter className="gap-2 sm:gap-0 mt-2">
+            <Button variant="ghost" onClick={() => setAddLogDate(null)} className="rounded-xl font-semibold text-xs">Cancel</Button>
+            <Button onClick={handleAddLog} disabled={!addLogTime} className="bg-[#CE1126] hover:bg-[#b30f21] text-white rounded-xl font-bold text-xs px-6 shadow-md disabled:opacity-50">Save Record</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import Header from "@/components/Header";
 import { saveOfficeSettings, getOfficeSettings } from "./actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MapPin, Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Dynamically load the Leaflet Map to avoid SSR issues with 'window'
 const MapComponent = dynamic(() => import("@/components/Map"), { 
   ssr: false, 
-  loading: () => <div className="h-64 w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" /> 
+  loading: () => <Skeleton className="h-72 w-full rounded-2xl" /> 
 });
 
 export default function OfficeSettingsPage() {
@@ -54,7 +61,7 @@ export default function OfficeSettingsPage() {
       (error) => {
         setIsLoading(false);
         if (error.code === error.PERMISSION_DENIED) {
-          setMessage({ text: "Location access is required to mark attendance. Please enable location permissions for this site in your browser settings.", type: "error" });
+          setMessage({ text: "Location access is required to set coordinates. Please enable location permissions in your browser.", type: "error" });
         } else {
           setMessage({ text: "Failed to fetch location. Please try again or enter manually.", type: "error" });
         }
@@ -83,97 +90,111 @@ export default function OfficeSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <main className="px-6 pb-6 flex-1 max-w-4xl w-full mx-auto flex flex-col gap-6">
-        <h1 className="text-2xl font-bold text-foreground">Office Settings</h1>
+    <div className="min-h-screen flex flex-col bg-transparent">
+      <Header title="Office Settings" />
+      
+      <main className="p-4 sm:p-6 flex-1 max-w-4xl w-full mx-auto flex flex-col gap-6 pb-16">
+        <div>
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Office Geofencing & Location</h1>
+          <p className="text-xs text-muted-foreground font-medium mt-0.5">Configure campus attendance perimeters and coordinate boundaries</p>
+        </div>
         
-        {message && message.type === 'error' && (
-           <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 flex justify-between items-start">
-             <p className="text-sm font-medium">{message.text}</p>
-             {message.text.includes("permission") && (
-               <button onClick={handleGetCurrentLocation} className="text-sm underline ml-4 font-semibold shrink-0">Retry</button>
-             )}
-           </div>
+        {message && (
+          <Alert variant={message.type === 'error' ? 'destructive' : 'default'} className={`rounded-2xl border ${
+            message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400' : 
+            message.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : ''
+          }`}>
+            {message.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+            <AlertDescription className="font-semibold text-xs ml-2 flex items-center justify-between w-full">
+              <span>{message.text}</span>
+              {message.text.includes("permission") && (
+                <Button variant="link" size="sm" onClick={handleGetCurrentLocation} className="text-xs font-extrabold h-auto p-0 ml-4 underline">Retry</Button>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6 sm:p-8">
-          <h2 className="text-xl font-bold mb-1 text-accent">Geofencing</h2>
-          <p className="text-foreground/70 mb-6 text-sm">
-            Set the geographical boundary for the office. Employees must be inside this circle to check in or out.
-          </p>
-
-          <button 
-            type="button"
-            onClick={handleGetCurrentLocation}
-            disabled={isLoading}
-            className="w-full sm:w-auto px-6 py-3 bg-gray-100 dark:bg-gray-800 text-foreground font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mb-8 disabled:opacity-50"
-          >
-            {isLoading ? "Fetching GPS..." : "📍 Set Current Location as Office"}
-          </button>
+        <Card className="rounded-3xl border-border shadow-md p-6 sm:p-8 bg-card/90">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-border/60">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Geofence Boundary</h2>
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                Employees must be physically positioned inside this circular zone to mark attendance.
+              </p>
+            </div>
+            
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={handleGetCurrentLocation}
+              disabled={isLoading}
+              className="rounded-xl font-bold text-xs h-10 px-4 gap-2 bg-card border-border hover:bg-muted shrink-0"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-[#CE1126]" /> : <MapPin size={16} className="text-[#CE1126]" />}
+              <span>{isLoading ? "Fetching GPS..." : "Set Current Location"}</span>
+            </Button>
+          </div>
 
           <form onSubmit={handleSave} className="flex flex-col gap-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-foreground/80">Latitude</label>
-                <input
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Latitude</Label>
+                <Input
                   type="number"
                   step="any"
                   value={lat}
                   onChange={(e) => setLat(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-accent outline-none w-full"
+                  className="h-12 rounded-xl bg-muted/40 font-mono font-bold text-base"
                   required
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-foreground/80">Longitude</label>
-                <input
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Longitude</Label>
+                <Input
                   type="number"
                   step="any"
                   value={lon}
                   onChange={(e) => setLon(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-accent outline-none w-full"
+                  className="h-12 rounded-xl bg-muted/40 font-mono font-bold text-base"
                   required
                 />
               </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-foreground/80">Allowed Radius (meters)</label>
-              <input
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Allowed Radius (meters)</Label>
+              <Input
                 type="number"
                 min="10"
                 value={radius}
                 onChange={(e) => setRadius(Number(e.target.value))}
-                className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-accent outline-none w-full"
+                className="h-12 rounded-xl bg-muted/40 font-mono font-bold text-base max-w-xs"
                 required
               />
-              <p className="text-xs text-foreground/50 mt-1">
-                Employees must be within this distance of the office to scan.
+              <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                Recommended between 100m to 250m to accommodate building GPS drift.
               </p>
             </div>
 
             {lat !== "" && lon !== "" && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-foreground/80 mb-2">Coverage Preview</p>
-                <MapComponent latitude={Number(lat)} longitude={Number(lon)} radius={radius} />
+              <div className="mt-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Coverage Map Preview</Label>
+                <div className="rounded-2xl overflow-hidden border border-border shadow-sm">
+                  <MapComponent latitude={Number(lat)} longitude={Number(lon)} radius={radius} />
+                </div>
               </div>
             )}
 
-            {message && message.type !== 'error' && (
-              <p className={`text-sm mt-2 ${message.type === 'success' ? 'text-accent' : 'text-amber-600'}`}>
-                {message.text}
-              </p>
-            )}
-
-            <button
+            <Button
               type="submit"
               disabled={isSaving || lat === "" || lon === ""}
-              className="mt-2 w-full bg-accent text-white font-medium py-3 rounded-xl hover:bg-accent-hover transition-colors disabled:opacity-50"
+              className="mt-4 bg-[#CE1126] hover:bg-[#b30f21] text-white font-bold h-12 rounded-xl shadow-lg shadow-[#CE1126]/20 transition-all flex items-center justify-center gap-2"
             >
-              {isSaving ? "Saving..." : "Save Configuration"}
-            </button>
+              {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+              <span>{isSaving ? "Saving Configuration..." : "Save Configuration"}</span>
+            </Button>
           </form>
-        </div>
+        </Card>
       </main>
     </div>
   );

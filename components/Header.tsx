@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import Image from "next/image";
+import NotificationBell from "@/components/NotificationBell";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface HeaderProps {
   title: string;
 }
-
-import NotificationBell from "@/components/NotificationBell";
 
 export default function Header({ title }: HeaderProps) {
   const router = useRouter();
@@ -50,10 +52,10 @@ export default function Header({ title }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full glass border-b border-gray-200 dark:border-gray-800">
-      <div className="flex items-center justify-between p-4 max-w-lg mx-auto w-full">
+    <header className="sticky top-0 z-40 w-full glass border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <div className="flex items-center justify-between p-4 max-w-6xl mx-auto w-full">
         <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center p-1">
+          <div className="relative w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center p-1.5 border border-gray-100 dark:border-gray-800">
             <Image 
               src="/logo.png" 
               alt="CU Logo" 
@@ -66,19 +68,29 @@ export default function Header({ title }: HeaderProps) {
             />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-foreground leading-tight">{title}</h1>
-            {fullName && <span className="text-xs font-medium text-accent">Hi, {fullName}</span>}
+            <h1 className="text-lg font-bold text-foreground leading-tight tracking-tight">{title}</h1>
+            {fullName && (
+              <span className="text-xs font-semibold text-[#CE1126] flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                Hi, {fullName}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell />
-          <button 
-            onClick={handleLogout}
-            className="p-2.5 bg-gray-100 dark:bg-gray-800 text-foreground rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95"
-            aria-label="Logout"
-          >
-            <LogOut size={18} className="text-accent" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger 
+              onClick={handleLogout}
+              className="h-11 w-11 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer outline-none"
+              aria-label="Logout"
+            >
+              <LogOut size={18} />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Logout</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </header>

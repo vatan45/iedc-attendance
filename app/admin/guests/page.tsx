@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { handleAuthError } from "@/lib/clientAuth";
 import { UsersRound, Phone, Briefcase, MapPin, Clock, Search, AlertTriangle, User } from "lucide-react";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface GuestEntry {
   id: string;
@@ -24,7 +31,6 @@ export default function GuestEntriesPage() {
 
   useEffect(() => {
     fetchGuests();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchGuests, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -68,120 +74,133 @@ export default function GuestEntriesPage() {
   return (
     <div className="min-h-screen flex flex-col bg-transparent">
       <Header title="Guest Entries" />
-      <main className="p-4 md:p-6 flex-1 w-full max-w-6xl mx-auto flex flex-col gap-6 relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+      <main className="p-4 sm:p-6 flex-1 w-full max-w-6xl mx-auto flex flex-col gap-6 relative pb-16">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#CE1126]/5 rounded-full blur-[120px] pointer-events-none" />
         
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-black text-foreground tracking-tight">Today's Visitors</h1>
+        <div className="flex items-center justify-between mb-0.5">
+          <div>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Today's Visitors</h1>
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">Real-time log of reception guest registrations</p>
+          </div>
         </div>
         
         {/* Summary Strip */}
-        <div className="grid grid-cols-1 gap-4 lg:gap-6">
-          <div className="glass p-6 rounded-3xl shadow-sm flex items-center justify-between group border border-gray-100 dark:border-gray-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SpotlightCard className="p-6 rounded-3xl border-border bg-card/90 shadow-sm flex items-center justify-between group">
             <div>
-              <p className="text-sm font-semibold text-foreground/60 uppercase tracking-wider mb-1">Total Guests Today</p>
-              <h3 className="text-4xl font-black text-accent">{isLoading ? "-" : guests.length}</h3>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Guests Today</p>
+              <h3 className="text-4xl font-black text-[#CE1126]">
+                {isLoading ? <Skeleton className="h-9 w-16" /> : guests.length}
+              </h3>
             </div>
-            <div className="w-14 h-14 bg-accent/10 text-accent rounded-full flex items-center justify-center">
+            <div className="w-14 h-14 bg-[#CE1126]/10 text-[#CE1126] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
               <UsersRound size={28} />
             </div>
-          </div>
+          </SpotlightCard>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-bold flex items-center gap-2">
-            <AlertTriangle size={18} />
-            {error}
-          </div>
+          <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/10">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="font-semibold text-xs ml-2">{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* List Section */}
-        <div className="glass rounded-[2rem] shadow-xl overflow-hidden flex flex-col flex-1 mt-4">
-          <div className="p-5 md:p-6 border-b border-gray-200/50 dark:border-gray-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40 dark:bg-black/40">
-            <h2 className="text-lg font-bold text-foreground">Live Entries</h2>
+        <Card className="rounded-3xl border-border shadow-md overflow-hidden flex flex-col flex-1 bg-card/90">
+          <div className="p-4 sm:p-6 border-b border-border/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/20">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Live Entries</h2>
+              <p className="text-xs text-muted-foreground font-medium">Updated automatically every 30 seconds</p>
+            </div>
             <div className="relative w-full sm:w-72">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/40">
-                <Search size={18} />
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Search size={16} />
               </span>
-              <input 
+              <Input 
                 type="text" 
                 placeholder="Search name, phone, purpose..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent shadow-sm"
+                className="pl-10 pr-4 h-10 bg-card border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-[#CE1126] shadow-sm w-full"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto flex-1 p-2">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="text-xs uppercase font-bold text-foreground/50 tracking-wider">
-                  <th className="p-4 pl-6">Guest Name</th>
-                  <th className="p-4">Contact</th>
-                  <th className="p-4">Purpose of Visit</th>
-                  <th className="p-4">Location Check</th>
-                  <th className="p-4 pr-6">Entry Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/60 hover:bg-transparent">
+                  <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground">Guest Name</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Contact</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Purpose of Visit</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Location Check</TableHead>
+                  <TableHead className="pr-6 font-bold text-xs uppercase tracking-wider text-muted-foreground">Entry Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-foreground/50 font-medium">Loading live data...</td>
-                  </tr>
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <TableRow key={idx} className="border-border/40">
+                      <TableCell className="pl-6 py-4"><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                      <TableCell className="pr-6"><Skeleton className="h-5 w-20" /></TableCell>
+                    </TableRow>
+                  ))
                 ) : filteredGuests.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-12 text-center">
-                      <div className="flex flex-col items-center justify-center text-foreground/50">
-                        <UsersRound size={48} className="mb-4 opacity-50" />
-                        <p className="text-lg font-bold text-foreground/70">No guests found</p>
-                        <p className="text-sm mt-1 font-medium">No one has checked in yet, or your search didn't match.</p>
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <UsersRound size={44} className="mb-3 opacity-40" />
+                        <p className="text-base font-bold text-foreground">No guests found</p>
+                        <p className="text-xs mt-1 font-medium">No one has checked in yet, or your search didn't match.</p>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredGuests.map(guest => (
-                    <tr 
-                      key={guest.id} 
-                      className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors rounded-xl"
-                    >
-                      <td className="p-4 pl-6">
+                    <TableRow key={guest.id} className="group hover:bg-muted/50 transition-colors border-border/50">
+                      <TableCell className="pl-6 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center">
-                            <User size={16} />
+                          <div className="w-8 h-8 rounded-xl bg-[#CE1126]/10 text-[#CE1126] flex items-center justify-center shrink-0 shadow-xs">
+                            <User size={15} />
                           </div>
-                          <div className="font-bold text-foreground">{guest.name}</div>
+                          <span className="font-bold text-foreground">{guest.name}</span>
                         </div>
-                      </td>
-                      <td className="p-4 text-sm text-foreground/60 font-semibold flex items-center gap-2">
-                        <Phone size={14} className="opacity-50" />
-                        {guest.contact_number}
-                      </td>
-                      <td className="p-4 text-sm text-foreground/70 font-medium max-w-[200px] truncate">
-                        <span className="flex items-center gap-2">
-                          <Briefcase size={14} className="opacity-50 shrink-0" />
-                          <span className="truncate">{guest.purpose}</span>
+                      </TableCell>
+                      <TableCell className="text-xs text-foreground/80 font-mono font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <Phone size={13} className="text-muted-foreground" />
+                          {guest.contact_number}
                         </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                          <MapPin size={12} />
-                          {guest.distance_from_office_meters != null ? `${guest.distance_from_office_meters}m away` : 'Unknown'}
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold text-muted-foreground max-w-[220px] truncate">
+                        <span className="flex items-center gap-1.5">
+                          <Briefcase size={13} className="text-muted-foreground shrink-0" />
+                          <span className="truncate text-foreground/90">{guest.purpose}</span>
                         </span>
-                      </td>
-                      <td className="p-4 pr-6 text-sm text-foreground/60 font-medium">
-                        <span className="flex items-center gap-2">
-                          <Clock size={14} className="opacity-50" />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-bold px-2.5 py-0.5 rounded-full gap-1.5 text-[11px]">
+                          <MapPin size={11} className="text-muted-foreground" />
+                          <span>{guest.distance_from_office_meters != null ? `${guest.distance_from_office_meters}m away` : 'Unknown'}</span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="pr-6 text-xs text-muted-foreground font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={13} />
                           {new Date(guest.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
+        </Card>
       </main>
     </div>
   );

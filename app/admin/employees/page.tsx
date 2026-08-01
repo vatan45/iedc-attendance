@@ -4,6 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { handleAuthError } from "@/lib/clientAuth";
+import Header from "@/components/Header";
+import { Plus, Search, Copy, Check, MoreHorizontal, Shield, User, Loader2, AlertCircle, RefreshCw, Power } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Employee {
   id: string;
@@ -170,215 +182,278 @@ export default function EmployeeManagement() {
   );
 
   return (
-    <div className="flex flex-col min-h-full">
-      <main className="p-4 md:p-6 flex-1 w-full max-w-6xl mx-auto flex flex-col gap-6">
+    <div className="flex flex-col min-h-full bg-transparent">
+      <Header title="Employee Management" />
+      <main className="p-4 sm:p-6 flex-1 w-full max-w-6xl mx-auto flex flex-col gap-6 pb-16">
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl font-bold text-foreground">Employees</h1>
-          <button 
+          <div>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Employees Directory</h1>
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">Manage credentials, roles, and attendance status</p>
+          </div>
+          <Button 
             onClick={() => {
               setFormData({ full_name: "", employee_code: nextCode, password: "", role: "employee" });
               setFormError(null);
               setShowAdd(true);
             }}
-            className="px-4 py-2 bg-accent text-white font-medium rounded-xl hover:bg-accent-hover transition-colors flex items-center gap-2"
+            className="bg-[#CE1126] hover:bg-[#b30f21] text-white font-bold rounded-xl h-11 px-5 gap-2 shadow-md shadow-[#CE1126]/20"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Add Employee
-          </button>
+            <Plus size={18} />
+            <span>Add Employee</span>
+          </Button>
         </div>
 
-        {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium">{error}</div>}
+        {error && (
+          <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/10">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="font-semibold text-xs ml-2">{error}</AlertDescription>
+          </Alert>
+        )}
 
         {/* List Section */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-end">
-            <div className="relative w-full sm:w-64">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-              <input 
+        <Card className="rounded-3xl border-border shadow-md overflow-hidden flex flex-col flex-1 bg-card/90">
+          <div className="p-4 sm:p-5 border-b border-border/70 flex justify-end bg-muted/20">
+            <div className="relative w-full sm:w-72">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Search size={16} />
+              </span>
+              <Input 
                 type="text" 
-                placeholder="Search..." 
+                placeholder="Search employees or codes..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="pl-10 pr-4 h-10 bg-card border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-[#CE1126] shadow-sm w-full"
               />
             </div>
           </div>
 
-          <div className="overflow-x-auto flex-1 min-h-[400px]">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 text-xs uppercase font-semibold text-foreground/60 tracking-wider">
-                  <th className="p-4 pl-6">Name</th>
-                  <th className="p-4">Code</th>
-                  <th className="p-4">Role</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Joined</th>
-                  <th className="p-4 pr-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+          <div className="overflow-x-auto flex-1 min-h-[400px] p-2">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/60 hover:bg-transparent">
+                  <TableHead className="pl-6 font-bold text-xs uppercase tracking-wider text-muted-foreground">Name</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Code</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Role</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Joined</TableHead>
+                  <TableHead className="pr-6 text-right font-bold text-xs uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-foreground/50 text-sm">Loading employees...</td>
-                  </tr>
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <TableRow key={idx} className="border-border/40">
+                      <TableCell className="pl-6 py-4"><Skeleton className="h-5 w-36" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell className="pr-6 text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
                 ) : filteredEmployees.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-foreground/50 text-sm">No employees found.</td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-16 text-center text-muted-foreground font-medium text-sm">
+                      No employees found matching your criteria.
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredEmployees.map(emp => (
-                    <tr key={emp.id} className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="p-4 pl-6">
-                        <Link href={`/admin/employee/${emp.id}`} className="font-semibold text-foreground hover:text-accent transition-colors block">
+                    <TableRow key={emp.id} className="group hover:bg-muted/50 transition-colors border-border/50">
+                      <TableCell className="pl-6 py-3.5">
+                        <Link href={`/admin/employee/${emp.id}`} className="font-bold text-foreground hover:text-[#CE1126] transition-colors block">
                           {emp.full_name}
                         </Link>
-                      </td>
-                      <td className="p-4 text-sm font-medium text-foreground/70">{emp.employee_code}</td>
-                      <td className="p-4 text-sm text-foreground/60 capitalize">{emp.role}</td>
-                      <td className="p-4">
+                      </TableCell>
+                      <TableCell className="text-xs font-mono font-bold text-muted-foreground">{emp.employee_code}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize text-xs font-bold gap-1 px-2.5 py-0.5">
+                          {emp.role === 'admin' ? <Shield size={12} className="text-[#CE1126]" /> : <User size={12} />}
+                          <span>{emp.role}</span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         {emp.is_active ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
+                          <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/20 hover:bg-green-500/15 font-bold px-2.5 py-0.5 rounded-full">Active</Badge>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Deactivated</span>
+                          <Badge variant="destructive" className="bg-destructive/15 text-destructive border border-destructive/20 hover:bg-destructive/15 font-bold px-2.5 py-0.5 rounded-full">Deactivated</Badge>
                         )}
-                      </td>
-                      <td className="p-4 text-sm text-foreground/60">
-                        {new Date(emp.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="p-4 pr-6 text-right relative">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => {
-                            setFormData({ full_name: emp.full_name, employee_code: emp.employee_code, password: "", role: emp.role });
-                            setFormError(null);
-                            setEditEmp(emp);
-                          }} className="text-sm font-medium text-accent hover:underline">Edit</button>
-                          
-                          {/* Dropdown-like actions wrapped in a small flex */}
-                          <button onClick={() => {
-                            setResetPassword(generatePassword());
-                            setFormError(null);
-                            setResetEmp(emp);
-                          }} className="text-sm font-medium text-foreground/60 hover:text-foreground mx-2">Reset Pwd</button>
-
-                          <button 
-                            onClick={() => handleToggleStatus(emp)}
-                            className={`text-sm font-medium ${emp.is_active ? 'text-red-500 hover:text-red-600' : 'text-green-600 hover:text-green-700'}`}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-medium">
+                        {new Date(emp.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </TableCell>
+                      <TableCell className="pr-6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setFormData({ full_name: emp.full_name, employee_code: emp.employee_code, password: "", role: emp.role });
+                              setFormError(null);
+                              setEditEmp(emp);
+                            }}
+                            className="h-8 font-bold text-xs text-[#CE1126] hover:text-[#CE1126] hover:bg-[#CE1126]/10 px-2.5 rounded-lg"
                           >
-                            {emp.is_active ? "Deactivate" : "Reactivate"}
-                          </button>
+                            Edit
+                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="h-8 w-8 rounded-lg inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                              <MoreHorizontal size={16} />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-2xl border-border p-1.5">
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setResetPassword(generatePassword());
+                                  setFormError(null);
+                                  setResetEmp(emp);
+                                }}
+                                className="gap-2 text-xs font-semibold py-2 rounded-xl cursor-pointer"
+                              >
+                                <RefreshCw size={14} className="text-muted-foreground" />
+                                <span>Reset Password</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleStatus(emp)}
+                                className={`gap-2 text-xs font-semibold py-2 rounded-xl cursor-pointer ${emp.is_active ? 'text-destructive focus:text-destructive' : 'text-green-600 focus:text-green-600'}`}
+                              >
+                                <Power size={14} />
+                                <span>{emp.is_active ? "Deactivate Account" : "Reactivate Account"}</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
-
+        </Card>
       </main>
 
       {/* Add Modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold mb-4">Add Employee</h3>
-            <form onSubmit={handleAddSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Full Name</label>
-                <input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl" />
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent className="sm:max-w-md rounded-3xl border-border p-6 bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Add Employee</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-medium">Create credentials and assign administrative or user privileges</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddSubmit} className="flex flex-col gap-4 mt-2">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</Label>
+              <Input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="h-11 rounded-xl bg-muted/40 font-medium" placeholder="E.g. Rahul Sharma" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Employee Code</Label>
+              <Input required type="text" value={formData.employee_code} onChange={e => setFormData({...formData, employee_code: e.target.value})} className="h-11 rounded-xl bg-muted/40 font-mono font-bold" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Role</Label>
+              <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="h-11 px-3 bg-muted/40 border border-border rounded-xl font-medium text-sm text-foreground focus:ring-2 focus:ring-[#CE1126] outline-none">
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Initial Password</Label>
+              <div className="flex gap-2">
+                <Input required type="text" readOnly value={formData.password} placeholder="Click generate..." className="h-11 rounded-xl bg-muted/20 font-mono font-bold" />
+                <Button type="button" variant="outline" onClick={() => setFormData({...formData, password: generatePassword()})} className="h-11 rounded-xl font-bold px-4">Generate</Button>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Employee Code</label>
-                <input required type="text" value={formData.employee_code} onChange={e => setFormData({...formData, employee_code: e.target.value})} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Role</label>
-                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-                  <option value="employee">Employee</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Password</label>
-                <div className="flex gap-2">
-                  <input required type="text" readOnly value={formData.password} placeholder="Generate a password..." className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-mono" />
-                  <button type="button" onClick={() => setFormData({...formData, password: generatePassword()})} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-medium rounded-xl whitespace-nowrap">Generate</button>
+              {formData.password && (
+                <div className="mt-2 p-3 bg-[#CE1126]/5 border border-[#CE1126]/20 rounded-xl flex items-center justify-between">
+                  <span className="text-sm font-bold font-mono tracking-wide text-foreground">{formData.password}</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => handleCopy(formData.password)} className="h-7 text-[#CE1126] font-bold text-xs">
+                    {copied ? <><Check size={13} className="mr-1" /> Copied</> : <><Copy size={13} className="mr-1" /> Copy</>}
+                  </Button>
                 </div>
-                {formData.password && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
-                    <p className="text-sm text-blue-800 font-medium tracking-wide font-mono">{formData.password}</p>
-                    <button type="button" onClick={() => handleCopy(formData.password)} className="text-blue-600 hover:text-blue-800 text-sm font-bold">
-                      {copied ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                )}
-                <p className="text-xs text-foreground/50 mt-2">Copy and share this password immediately. It will never be shown again.</p>
-              </div>
+              )}
+              <p className="text-[11px] text-muted-foreground font-medium mt-1">Copy and share immediately. It cannot be retrieved after creation.</p>
+            </div>
 
-              {formError && <p className="text-red-500 text-sm">{formError}</p>}
+            {formError && <Alert variant="destructive" className="rounded-xl py-2 text-xs font-semibold">{formError}</Alert>}
 
-              <div className="flex gap-3 justify-end mt-4">
-                <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 font-medium text-foreground/60">Cancel</button>
-                <button type="submit" disabled={isSubmitting || !formData.password} className="px-4 py-2 bg-accent text-white font-medium rounded-lg disabled:opacity-50">Create Employee</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter className="mt-2 gap-2 sm:gap-0">
+              <Button type="button" variant="ghost" onClick={() => setShowAdd(false)} className="rounded-xl font-semibold">Cancel</Button>
+              <Button type="submit" disabled={isSubmitting || !formData.password} className="bg-[#CE1126] hover:bg-[#b30f21] text-white font-bold rounded-xl px-5">
+                {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                Create Employee
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Modal */}
-      {editEmp && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold mb-4">Edit Employee</h3>
-            <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Full Name</label>
-                <input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Employee Code</label>
-                <input required type="text" value={formData.employee_code} onChange={e => setFormData({...formData, employee_code: e.target.value})} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl" />
-              </div>
-              {formError && <p className="text-red-500 text-sm">{formError}</p>}
-              <div className="flex gap-3 justify-end mt-4">
-                <button type="button" onClick={() => setEditEmp(null)} className="px-4 py-2 font-medium text-foreground/60">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-accent text-white font-medium rounded-lg disabled:opacity-50">Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Dialog open={!!editEmp} onOpenChange={(open) => !open && setEditEmp(null)}>
+        <DialogContent className="sm:max-w-md rounded-3xl border-border p-6 bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Edit Employee</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-medium">Update profile name and unique organizational code</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="flex flex-col gap-4 mt-2">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</Label>
+              <Input required type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="h-11 rounded-xl bg-muted/40 font-medium" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Employee Code</Label>
+              <Input required type="text" value={formData.employee_code} onChange={e => setFormData({...formData, employee_code: e.target.value})} className="h-11 rounded-xl bg-muted/40 font-mono font-bold" />
+            </div>
+            {formError && <Alert variant="destructive" className="rounded-xl py-2 text-xs font-semibold">{formError}</Alert>}
+            <DialogFooter className="mt-2 gap-2 sm:gap-0">
+              <Button type="button" variant="ghost" onClick={() => setEditEmp(null)} className="rounded-xl font-semibold">Cancel</Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-[#CE1126] hover:bg-[#b30f21] text-white font-bold rounded-xl px-5">
+                {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Reset Password Modal */}
-      {resetEmp && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold mb-4 text-red-600">Reset Password for {resetEmp.full_name}</h3>
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-foreground/70">A new secure password has been generated. This action will log the user out of all devices immediately.</p>
-              
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-between">
-                <p className="text-lg font-bold font-mono tracking-wider">{resetPassword}</p>
-                <button type="button" onClick={() => handleCopy(resetPassword)} className="text-accent hover:text-accent-hover text-sm font-bold">
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-              
-              <p className="text-xs font-bold text-red-500">WARNING: Copy this password now. Once you click Confirm, it can never be viewed again.</p>
-
-              {formError && <p className="text-red-500 text-sm">{formError}</p>}
-              <div className="flex gap-3 justify-end mt-4">
-                <button type="button" onClick={() => setResetEmp(null)} className="px-4 py-2 font-medium text-foreground/60">Cancel</button>
-                <button onClick={handleResetPassword} disabled={isSubmitting} className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg disabled:opacity-50">Confirm & Reset</button>
-              </div>
+      <Dialog open={!!resetEmp} onOpenChange={(open) => !open && setResetEmp(null)}>
+        <DialogContent className="sm:max-w-md rounded-3xl border-border p-6 bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight text-destructive">Reset Password</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-medium">
+              Generating a new password for <strong className="text-foreground">{resetEmp?.full_name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 mt-2">
+            <p className="text-xs text-muted-foreground leading-relaxed font-medium">A new secure password has been generated. Confirmed execution will immediately log the user out of all active devices.</p>
+            
+            <div className="p-4 bg-muted/40 border border-border rounded-2xl flex items-center justify-between">
+              <span className="text-lg font-bold font-mono tracking-wider text-foreground">{resetPassword}</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => handleCopy(resetPassword)} className="h-8 text-[#CE1126] font-bold rounded-xl">
+                {copied ? <><Check size={14} className="mr-1" /> Copied!</> : <><Copy size={14} className="mr-1" /> Copy</>}
+              </Button>
             </div>
-          </div>
-        </div>
-      )}
+            
+            <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-xs font-bold ml-2">
+                Copy this password now! It can never be viewed again once confirmed.
+              </AlertDescription>
+            </Alert>
 
+            {formError && <Alert variant="destructive" className="rounded-xl py-2 text-xs font-semibold">{formError}</Alert>}
+            
+            <DialogFooter className="mt-3 gap-2 sm:gap-0">
+              <Button type="button" variant="ghost" onClick={() => setResetEmp(null)} className="rounded-xl font-semibold">Cancel</Button>
+              <Button onClick={handleResetPassword} disabled={isSubmitting} variant="destructive" className="font-bold rounded-xl px-5">
+                {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                Confirm & Reset
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

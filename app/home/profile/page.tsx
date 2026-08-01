@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
-import { UserCircle2, Lock, Save, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { UserCircle2, Lock, Save, Loader2, AlertTriangle, CheckCircle2, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -98,105 +105,117 @@ export default function ProfilePage() {
     <div className="flex flex-col min-h-screen">
       <Header title="My Profile" />
       
-      <main className="p-4 sm:p-6 w-full max-w-lg mx-auto flex flex-col gap-6">
+      <main className="p-4 sm:p-6 w-full max-w-lg mx-auto flex flex-col gap-6 pb-12">
         
         {/* Profile Card */}
-        <section className="glass rounded-[2rem] p-6 shadow-xl flex flex-col items-center text-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-[50px]" />
+        <Card className="rounded-3xl p-6 shadow-md flex flex-col items-center text-center relative overflow-hidden border-border bg-card/90">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-[#CE1126]/10 rounded-full blur-[50px] pointer-events-none" />
           
-          <div className="w-24 h-24 bg-gradient-to-tr from-accent/20 to-accent/5 rounded-full flex items-center justify-center mb-4 border border-accent/20">
-            <UserCircle2 size={48} className="text-accent" />
+          <div className="w-24 h-24 bg-[#CE1126]/10 rounded-3xl flex items-center justify-center mb-4 border border-[#CE1126]/20 shadow-inner">
+            <UserCircle2 size={54} className="text-[#CE1126]" />
           </div>
           
           {isFetching ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="animate-spin text-accent" />
-              <p className="text-sm text-foreground/50">Loading profile...</p>
+            <div className="space-y-3 w-48">
+              <Skeleton className="h-6 w-full mx-auto" />
+              <div className="flex gap-2 justify-center">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
             </div>
           ) : profile ? (
             <>
-              <h2 className="text-2xl font-black text-foreground mb-1">{profile.full_name}</h2>
-              <div className="flex items-center justify-center gap-3 mt-2">
-                <span className="bg-foreground/5 text-foreground/70 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider">
+              <h2 className="text-2xl font-extrabold text-foreground tracking-tight mb-2">{profile.full_name}</h2>
+              <div className="flex items-center justify-center gap-2.5">
+                <Badge variant="secondary" className="font-mono text-xs font-bold tracking-wider px-3 py-1">
                   {profile.employee_code}
-                </span>
-                <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                </Badge>
+                <Badge className="bg-[#CE1126] text-white hover:bg-[#CE1126] uppercase font-bold text-[10px] tracking-wider px-3 py-1">
                   {profile.role}
-                </span>
+                </Badge>
               </div>
             </>
           ) : (
-            <p className="text-red-500">Could not load profile details.</p>
+            <p className="text-destructive font-medium text-sm">Could not load profile details.</p>
           )}
-        </section>
+        </Card>
 
         {/* Change Password Form */}
-        <section className="glass rounded-[2rem] p-6 shadow-xl relative overflow-hidden">
+        <Card className="rounded-3xl p-6 shadow-md relative overflow-hidden border-border bg-card/90">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-foreground/5 rounded-xl">
-              <Lock size={20} className="text-foreground/70" />
+            <div className="p-2.5 bg-[#CE1126]/10 text-[#CE1126] rounded-2xl">
+              <KeyRound size={20} />
             </div>
             <h3 className="text-lg font-bold text-foreground">Change Password</h3>
           </div>
           
           {status && (
-            <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-start gap-3 ${
-              status.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'
-            }`}>
-              {status.type === 'error' ? <AlertTriangle size={18} className="shrink-0 mt-0.5" /> : <CheckCircle2 size={18} className="shrink-0 mt-0.5" />}
-              <span>{status.msg}</span>
-            </div>
+            <Alert variant={status.type === 'error' ? 'destructive' : 'default'} className={`mb-6 rounded-2xl border ${status.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400' : ''}`}>
+              {status.type === 'error' ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />}
+              <AlertDescription className="font-semibold text-xs ml-2">
+                {status.msg}
+              </AlertDescription>
+            </Alert>
           )}
 
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-xs font-bold text-foreground/60 uppercase tracking-wider mb-2">Current Password</label>
-              <input 
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="currentPass" className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-0.5">
+                Current Password
+              </Label>
+              <Input 
+                id="currentPass"
                 type="password"
                 required
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
-                className="w-full bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                className="rounded-xl h-12 bg-muted/40 font-medium"
                 placeholder="••••••••"
               />
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-foreground/60 uppercase tracking-wider mb-2">New Password</label>
-                <input 
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="newPass" className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-0.5">
+                  New Password
+                </Label>
+                <Input 
+                  id="newPass"
                   type="password"
                   required
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  className="w-full bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                  className="rounded-xl h-12 bg-muted/40 font-medium"
                   placeholder="••••••••"
                 />
               </div>
               
-              <div>
-                <label className="block text-xs font-bold text-foreground/60 uppercase tracking-wider mb-2">Confirm New</label>
-                <input 
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="confirmPass" className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-0.5">
+                  Confirm New
+                </Label>
+                <Input 
+                  id="confirmPass"
                   type="password"
                   required
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  className="w-full bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                  className="rounded-xl h-12 bg-muted/40 font-medium"
                   placeholder="••••••••"
                 />
               </div>
             </div>
             
-            <button 
+            <Button 
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 w-full bg-accent hover:bg-accent/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-accent/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
+              className="mt-3 w-full bg-[#CE1126] hover:bg-[#b30f21] text-white font-bold h-12 rounded-xl shadow-lg shadow-[#CE1126]/20 transition-all flex items-center justify-center gap-2"
             >
               {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              {isSubmitting ? 'Updating...' : 'Save New Password'}
-            </button>
+              <span>{isSubmitting ? 'Updating Password...' : 'Save New Password'}</span>
+            </Button>
           </form>
-        </section>
+        </Card>
 
       </main>
     </div>

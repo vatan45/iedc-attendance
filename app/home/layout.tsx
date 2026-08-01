@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, List, UserCircle2, CheckSquare } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -26,7 +27,6 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       }
     };
     fetchPendingTasks();
-    // Poll every 60s for new tasks
     const interval = setInterval(fetchPendingTasks, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -46,32 +46,37 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 glass border-t border-gray-200/50 dark:border-gray-800/50 flex justify-around p-2 z-40 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border/70 flex justify-around p-2 z-40 pb-safe shadow-[0_-4px_25px_rgba(0,0,0,0.05)]">
         {navItems.map(item => {
           const isActive = pathname === item.href;
           return (
             <Link 
               key={item.name} 
               href={item.href}
-              className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl flex-1 min-w-0 transition-all ${
+              className={`group relative flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl flex-1 min-w-0 max-w-[100px] transition-all duration-200 ${
                 isActive 
-                ? 'text-accent scale-110' 
-                : 'text-foreground/50 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
+                ? 'text-[#CE1126] font-bold scale-105' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
             >
-              {item.badge ? (
+              {item.badge && item.badge > 0 ? (
                 <div className="relative">
                   {item.icon}
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-gray-900">
+                  <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#CE1126] px-1 text-[9px] font-black text-white shadow-sm ring-2 ring-card">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 </div>
               ) : (
-                item.icon
+                <div className={isActive ? "text-[#CE1126]" : "text-muted-foreground group-hover:text-foreground transition-colors"}>
+                  {item.icon}
+                </div>
               )}
-              <span className={`text-[10px] font-bold tracking-wide w-full text-center ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+              <span className={`text-[10px] tracking-tight w-full text-center ${isActive ? 'font-bold' : 'font-medium'}`}>
                 {item.name}
               </span>
+              {isActive && (
+                <span className="absolute bottom-0 w-8 h-1 bg-[#CE1126] rounded-t-full" />
+              )}
             </Link>
           )
         })}

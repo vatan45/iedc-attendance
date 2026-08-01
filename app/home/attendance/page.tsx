@@ -6,6 +6,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { handleAuthError } from "@/lib/clientAuth";
 import { ChevronLeft, Calendar as CalendarIcon, Clock, LogIn, LogOut, AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Log {
   id: string;
@@ -17,7 +23,7 @@ interface DailyGroup {
   dateStr: string;
   dateObj: Date;
   logs: Log[];
-  totalHours: number | null; // null means incomplete
+  totalHours: number | null;
   isIncomplete: boolean;
 }
 
@@ -31,7 +37,6 @@ const formatHoursToReadable = (decimalHours: number) => {
 
 export default function MyAttendance() {
   const router = useRouter();
-  // Default to current month
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -57,12 +62,10 @@ export default function MyAttendance() {
         return;
       }
 
-      // Calculate start and end of selected month
       const [yearStr, monthStr] = selectedMonth.split("-");
       const year = parseInt(yearStr, 10);
       const monthIndex = parseInt(monthStr, 10) - 1;
 
-      // Use local timezone for query boundaries
       const from = new Date(year, monthIndex, 1);
       const to = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
 
@@ -90,7 +93,6 @@ export default function MyAttendance() {
   };
 
   const processLogs = (logs: Log[]) => {
-    // 1. Group by local date string
     const groupsMap = new Map<string, Log[]>();
     
     logs.forEach(log => {
@@ -102,24 +104,19 @@ export default function MyAttendance() {
       groupsMap.get(dateStr)!.push(log);
     });
 
-    // 2. Process each group
     const processedGroups: DailyGroup[] = [];
     let sumHours = 0;
 
     groupsMap.forEach((dayLogs, dateStr) => {
-      // Sort logs chronologically just in case
       dayLogs.sort((a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime());
       
       let dailyMilliseconds = 0;
-      let isIncomplete = dayLogs.length % 2 !== 0; // Odd number of logs usually implies incomplete (missing an exit, or current shift active)
+      let isIncomplete = dayLogs.length % 2 !== 0;
       
-      // Calculate hours if even
       if (!isIncomplete) {
         for (let i = 0; i < dayLogs.length; i += 2) {
           const entry = dayLogs[i];
           const exit = dayLogs[i + 1];
-          // Simple validation: assume i is entry and i+1 is exit. 
-          // If the order is messed up, mark incomplete.
           if (entry.type === "entry" && exit.type === "exit") {
             dailyMilliseconds += new Date(exit.scanned_at).getTime() - new Date(entry.scanned_at).getTime();
           } else {
@@ -143,7 +140,6 @@ export default function MyAttendance() {
       });
     });
 
-    // 3. Sort groups descending (newest first)
     processedGroups.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
 
     setGroupedLogs(processedGroups);
@@ -159,100 +155,109 @@ export default function MyAttendance() {
         
         {/* Navigation & Controls */}
         <div className="flex items-center justify-between mt-2">
-          <Link href="/home" className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-foreground font-semibold rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
-            <ChevronLeft size={16} />
-            Back
+          <Link href="/home">
+            <Button variant="outline" size="sm" className="rounded-full h-9 font-semibold gap-1.5 text-xs px-4">
+              <ChevronLeft size={16} />
+              Back
+            </Button>
           </Link>
 
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-foreground/40">
-              <CalendarIcon size={16} />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+              <CalendarIcon size={15} />
             </div>
-            <input 
+            <Input 
               type="month" 
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="pl-9 pr-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-accent shadow-sm"
+              className="pl-9 pr-3.5 h-9 bg-card border-border rounded-full text-xs font-bold w-auto shadow-sm"
             />
           </div>
         </div>
 
         {/* Summary Card */}
-        <div className="bg-foreground text-background rounded-3xl p-6 shadow-xl relative overflow-hidden flex justify-between items-center">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+        <Card className="bg-gradient-to-tr from-zinc-900 via-zinc-900 to-black text-white rounded-3xl p-6 shadow-xl relative overflow-hidden border border-zinc-800">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-[#CE1126]/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
           
-          <div className="relative z-10">
-            <p className="text-background/70 font-semibold text-xs uppercase tracking-wider mb-1">Total Present</p>
-            <p className="text-4xl font-black">{totalDays} <span className="text-xl font-bold text-background/60">Days</span></p>
+          <div className="flex justify-between items-center relative z-10">
+            <div>
+              <p className="text-white/60 font-semibold text-xs uppercase tracking-wider mb-1">Total Present</p>
+              <p className="text-4xl font-black">{totalDays} <span className="text-lg font-bold text-white/50">Days</span></p>
+            </div>
+            <div className="text-right">
+              <p className="text-white/60 font-semibold text-xs uppercase tracking-wider mb-1">Total Time</p>
+              <p className="text-3xl font-black text-[#ff4d6a]">{formatHoursToReadable(totalHours)}</p>
+            </div>
           </div>
-          <div className="text-right relative z-10">
-            <p className="text-background/70 font-semibold text-xs uppercase tracking-wider mb-1">Total Time</p>
-            <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-accent to-red-400">{formatHoursToReadable(totalHours)}</p>
-          </div>
-        </div>
+        </Card>
 
         {/* Content */}
         {isLoading ? (
           <div className="flex flex-col gap-4 mt-2">
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-gray-100 dark:bg-gray-800/50 h-32 rounded-3xl animate-pulse"></div>
+              <Skeleton key={i} className="h-36 w-full rounded-3xl" />
             ))}
           </div>
         ) : error ? (
-          <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2">
-            <AlertCircle size={18} />
-            {error}
-          </div>
+          <Alert variant="destructive" className="rounded-2xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="font-semibold ml-2">{error}</AlertDescription>
+          </Alert>
         ) : groupedLogs.length === 0 ? (
-          <div className="glass rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-4">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-              <CalendarIcon size={32} className="text-gray-400 dark:text-gray-600" />
+          <Card className="rounded-3xl p-12 text-center flex flex-col items-center justify-center mt-4 bg-card/60">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mb-4">
+              <CalendarIcon size={30} className="text-muted-foreground" />
             </div>
             <p className="text-lg font-bold text-foreground">No records found</p>
-            <p className="text-sm text-foreground/50 mt-1 font-medium">You have no scans for this month.</p>
-          </div>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">You have no recorded logs for this month.</p>
+          </Card>
         ) : (
-          <div className="flex flex-col gap-4 mt-2 pb-10">
+          <div className="flex flex-col gap-4 mt-2 pb-12">
             {groupedLogs.map(group => (
-              <div key={group.dateStr} className="glass rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-shadow">
+              <Card key={group.dateStr} className="rounded-3xl p-5 shadow-sm border-border bg-card/90 hover:shadow-md transition-shadow">
                 
                 {/* Day Header */}
-                <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100 dark:border-gray-800/50">
-                  <h3 className="font-bold text-foreground text-lg">{group.dateStr}</h3>
+                <div className="flex justify-between items-center mb-4 pb-3.5 border-b border-border/60">
+                  <h3 className="font-bold text-foreground text-base">{group.dateStr}</h3>
                   {group.isIncomplete ? (
-                    <span className="px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-xs font-bold rounded-full">
+                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/20 text-[11px]">
                       INCOMPLETE
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="flex items-center gap-1.5 text-accent font-bold bg-accent/10 px-3 py-1 rounded-full text-sm">
-                      <Clock size={14} />
-                      {group.totalHours ? formatHoursToReadable(group.totalHours) : "0m"}
-                    </span>
+                    <Badge variant="secondary" className="bg-[#CE1126]/10 text-[#CE1126] font-bold px-2.5 py-0.5 rounded-full border border-[#CE1126]/20 gap-1 text-[11px]">
+                      <Clock size={12} />
+                      <span>{group.totalHours ? formatHoursToReadable(group.totalHours) : "0m"}</span>
+                    </Badge>
                   )}
                 </div>
 
                 {/* Day Logs */}
-                <div className="flex flex-col gap-4 pl-1">
+                <div className="flex flex-col gap-3 pl-1">
                   {group.logs.map((log, i) => (
-                    <div key={log.id} className="relative flex items-center gap-4">
-                      {/* Timeline line */}
+                    <div key={log.id} className="relative flex items-center gap-3.5">
                       {i !== group.logs.length - 1 && (
-                        <div className="absolute left-5 top-10 bottom-[-20px] w-0.5 bg-gray-100 dark:bg-gray-800" />
+                        <div className="absolute left-[19px] top-10 bottom-[-16px] w-0.5 bg-border" />
                       )}
                       
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm ${log.type === 'entry' ? 'bg-green-100 text-green-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm border ${
+                        log.type === 'entry' 
+                          ? 'bg-green-500/15 text-green-600 border-green-500/20 dark:text-green-400' 
+                          : 'bg-muted text-muted-foreground border-border'
+                      }`}>
                         {log.type === 'entry' ? <LogIn size={18} /> : <LogOut size={18} />}
                       </div>
                       
-                      <div className="flex-1 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
+                      <div className="flex-1 bg-muted/40 p-3 rounded-xl border border-border/50">
                         <p className="text-sm font-bold capitalize text-foreground">{log.type}</p>
-                        <p className="text-xs font-semibold text-foreground/50 mt-0.5">{new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-xs font-semibold text-muted-foreground mt-0.5">
+                          {new Date(log.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
 
-              </div>
+              </Card>
             ))}
           </div>
         )}
