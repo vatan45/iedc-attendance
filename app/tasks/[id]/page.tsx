@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
-import { ArrowLeft, Clock, Trash2, Calendar, User, AlignLeft, Send, Save, X, Edit2, Share2, Loader2, MessageSquare } from "lucide-react";
+import { ArrowLeft, Clock, Trash2, Calendar, User, AlignLeft, Send, Save, X, Edit2, Share2, Loader2, MessageSquare, Bell, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,11 @@ export default function TaskDetailPage(props: { params: Promise<{ id: string }> 
   const [commentText, setCommentText] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const feedEndRef = useRef<HTMLDivElement>(null);
+
+  // Request Update Modal states
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateNote, setUpdateNote] = useState("");
+  const [isRequestingUpdate, setIsRequestingUpdate] = useState(false);
 
   // Edit states
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -137,6 +142,32 @@ export default function TaskDetailPage(props: { params: Promise<{ id: string }> 
     }
   };
 
+  const handleRequestUpdate = async () => {
+    setIsRequestingUpdate(true);
+    try {
+      const token = localStorage.getItem("attendance_session_token");
+      const res = await fetch(`/api/admin/tasks/${taskId}/request-update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ update_message: updateNote })
+      });
+      if (res.ok) {
+        setIsUpdateModalOpen(false);
+        setUpdateNote("");
+        await fetchData();
+        setTimeout(() => feedEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to request task update");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while sending update request");
+    } finally {
+      setIsRequestingUpdate(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
     if (!task) return;
     const url = window.location.href;
@@ -182,10 +213,18 @@ export default function TaskDetailPage(props: { params: Promise<{ id: string }> 
         <div className="flex items-center gap-2">
           {isAdmin ? (
             <>
-              <Button size="sm" variant="outline" onClick={handleWhatsAppShare} className="text-green-600 border-green-600/20 bg-green-500/5 hover:bg-green-500/15 gap-1.5 text-xs font-bold rounded-xl h-9">
+              <Button 
+                size="sm" 
+                onClick={() => setIsUpdateModalOpen(true)} 
+                className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold gap-1.5 text-xs rounded-xl h-9 px-3.5 shadow-sm transition-all hover:scale-102 cursor-pointer"
+                title="Ask for Daily Status Update via WhatsApp"
+              >
+                <Bell size={14} className="animate-bounce" /> <span>Ask Update</span>
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleWhatsAppShare} className="text-green-600 border-green-600/20 bg-green-500/5 hover:bg-green-500/15 gap-1.5 text-xs font-bold rounded-xl h-9 cursor-pointer">
                 <Share2 size={14} /> <span>Share</span>
               </Button>
-              <Button size="sm" variant="outline" onClick={handleDelete} className="text-destructive border-destructive/20 bg-destructive/5 hover:bg-destructive/15 h-9 w-9 p-0 rounded-xl" title="Delete Task">
+              <Button size="sm" variant="outline" onClick={handleDelete} className="text-destructive border-destructive/20 bg-destructive/5 hover:bg-destructive/15 h-9 w-9 p-0 rounded-xl cursor-pointer" title="Delete Task">
                 <Trash2 size={16} />
               </Button>
             </>
@@ -354,11 +393,36 @@ export default function TaskDetailPage(props: { params: Promise<{ id: string }> 
           <div className="flex flex-col gap-5 relative pl-4 sm:pl-6 border-l border-border/80 ml-2">
             {feed.map((item) => {
               if (item._type === 'activity') {
+                if (item.action === 'update_requested' || (item.action === 'edited' && item.details?.update_requested)) {
+                  return (
+                    <div key={`act-${item.id}`} className="relative z-10 -ml-2 my-1">
+                      <Card className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 shadow-sm flex items-start gap-3.5 transition-all hover:shadow-md">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                          <RefreshCw size={16} className="animate-spin-slow" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                            <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                              <Bell size={13} /> STATUS UPDATE REQUESTED BY {item.actor?.full_name?.toUpperCase()}
+                            </span>
+                            <span className="text-[10px] font-bold text-muted-foreground ml-auto">
+                              {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-foreground bg-background/80 p-3 rounded-xl border border-amber-500/20 mt-2 shadow-xs leading-relaxed">
+                            {item.details?.message || 'Please share your progress update and status on this task today.'}
+                          </p>
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                }
+
                 let msg = `${item.actor?.full_name} updated the task`;
-                if (item.action === 'status_changed') msg = `${item.actor?.full_name} moved status to ${item.details.to.replace('_', ' ')}`;
-                if (item.action === 'priority_changed') msg = `${item.actor?.full_name} changed priority to ${item.details.to}`;
-                if (item.action === 'due_date_changed') msg = `${item.actor?.full_name} set due date to ${item.details.to ? new Date(item.details.to).toLocaleDateString() : 'None'}`;
-                if (item.action === 'edited') msg = `${item.actor?.full_name} edited ${item.details.fields.join(' and ')}`;
+                if (item.action === 'status_changed') msg = `${item.actor?.full_name} moved status to ${item.details?.to ? item.details.to.replace('_', ' ') : 'new status'}`;
+                if (item.action === 'priority_changed') msg = `${item.actor?.full_name} changed priority to ${item.details?.to || 'new priority'}`;
+                if (item.action === 'due_date_changed') msg = `${item.actor?.full_name} set due date to ${item.details?.to ? new Date(item.details.to).toLocaleDateString() : 'None'}`;
+                if (item.action === 'edited') msg = `${item.actor?.full_name} edited ${item.details?.fields ? item.details.fields.join(' and ') : 'the task details'}`;
                 if (item.action === 'reassigned') msg = `${item.actor?.full_name} reassigned the task`;
                 
                 return (
@@ -419,6 +483,54 @@ export default function TaskDetailPage(props: { params: Promise<{ id: string }> 
           </Button>
         </div>
       </div>
+
+      {/* Ask Update Modal */}
+      {isUpdateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-md p-6 rounded-3xl bg-card border-border shadow-2xl relative overflow-hidden flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-extrabold text-base">
+                <Bell size={18} />
+                <span>Ask for Daily Task Update</span>
+              </div>
+              <Button size="icon" variant="ghost" onClick={() => setIsUpdateModalOpen(false)} className="h-8 w-8 rounded-full cursor-pointer">
+                <X size={16} />
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+              Instead of creating a new task every day, send an instant update reminder to <span className="font-bold text-foreground">{task.assignee?.full_name || 'the assignee'}</span> via <span className="text-green-600 font-bold">WhatsApp</span> and app notifications.
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-black uppercase text-muted-foreground tracking-wider">
+                Update Instructions / Note (Optional)
+              </label>
+              <textarea 
+                value={updateNote}
+                onChange={(e) => setUpdateNote(e.target.value)}
+                placeholder="E.g., What is the status of the API integration? Please post your status below."
+                className="w-full min-h-[90px] font-medium bg-muted/40 border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground focus:ring-2 focus:ring-amber-500 outline-none resize-y"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <Button variant="ghost" size="sm" onClick={() => setIsUpdateModalOpen(false)} disabled={isRequestingUpdate} className="text-xs font-bold rounded-xl cursor-pointer">
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleRequestUpdate} 
+                disabled={isRequestingUpdate}
+                className="bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl px-4 h-9 shadow-md flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95"
+              >
+                {isRequestingUpdate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send size={14} />}
+                <span>Send WhatsApp Alert & Ask</span>
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
